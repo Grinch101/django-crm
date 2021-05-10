@@ -19,17 +19,17 @@ def signup(request):
         rows = Users.objects.filter(email=email)
         if len(rows) > 0:
             # Not Acceptable
-            return json_output(error='signup failed, email in use!', status=406)
+            return json_output(error='signup failed, email in use!', status=409) # Conflict!
         else:
             row = Users(email=email, passkey=passkey, client_name=client_name)
             row.save()
             user_id = Users.objects.filter(email=email, passkey=passkey,
                                            client_name=client_name)[0].id
             # OK
-            return json_output(info='user added!', data={'user_id': user_id}, status=201)
+            return json_output(info='user added!', data={'user_id': user_id}, status=201) # OK
     else:
         # Bad Request
-        return json_output(error='incomplete request', status=400)
+        return json_output(error='incomplete request', status=400) # Bad Request!
 
 
 @api_view(['POST'])
@@ -60,9 +60,9 @@ def login(request):
 @api_view(['GET'])
 @parser_classes([MultiPartParser])
 def current_user(request, user_id):
-    row = Users.objects.filter(id=user_id)[0]
+    row = Users.objects.get(id=user_id).id
     data = pass_pop(row)
-    return json_output(info='user retrived!', data=data)
+    return json_output(info='user retrived!', data=data) # OK
 
 
 @login_required
@@ -71,12 +71,21 @@ def current_user(request, user_id):
 def user_update(request, user_id):
     update_list = list(dict(request.data).keys())
     if update_list != []:
-        qs = Users.objects.filter(id=user_id)[0]
-        for item in update_list:
-            setattr(qs, item, dict(request.data)[item][0])
-            qs.save()
-        data = pass_pop(Users.objects.filter(id=user_id)[0])
-        data = {**data, 'updated_values': update_list}
-        return json_output(info='Updated!', data=data)
+        user_obj = Users.objects.get(id=user_id)
+        if 'client_name' in update_list:
+            user_obj.client_name = request.data['client_name']
+
+        if 'email' in update_list:
+            user_obj.email = request.data['email']
+
+        if 'passkey' in update_list:
+            user_obj.passkey = request.data['passkey']
+
+        user_obj.save()
+        row = Users.objects.get(id=user_obj.id)
+        data = pass_pop(row)
+        
+        return json_output(info='updated!', data=data) # OK
+
     else:
         return json_output(error='Empty request', status=400)  # Bad Request!
