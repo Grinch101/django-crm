@@ -7,5 +7,8 @@ class Users(models.Model):
     email = models.TextField('email', unique=True)
     passkey = models.TextField('passkey')
     
+    def __str__(self):
+        return f'{self.id} , {client_name}, {email}, {passkey}'
     class Meta:
         db_table = 'users'
+    
