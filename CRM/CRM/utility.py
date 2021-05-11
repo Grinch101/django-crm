@@ -1,13 +1,15 @@
-from django.http import JsonResponse
 from functools import wraps
 from CRM.settings import SECRET_KEY
 from apps.user.models import Users
 from jwt import DecodeError
-from django.core import serializers
+from django.http import JsonResponse
 import jwt
 
 
 def json_output(data='', error='', info='', status=200):
+    '''
+    produce a serializable response 
+    '''
     output_dic = {'data': data,
                   'error': error,
                   'info': info}
@@ -15,13 +17,19 @@ def json_output(data='', error='', info='', status=200):
 
 
 def login_required(func):
+    '''
+    Check the header for JWT and authenticate if it was valid
+    '''
     @wraps(func)
     def wrap(request, *args, **kwargs):
-        token = request.headers['JWT']
+        try:
+            token = request.headers['JWT']
+        except KeyError:
+            return json_output(error='TOKEN was not received!', status=409)
         if token:
             try:
                 payload = jwt.decode(token, key=SECRET_KEY,
-                                     algorithms=["HS256"])
+                                    algorithms=["HS256"])
                 user_id = int(payload['user_id'])
                 rows = Users.objects.filter(id=user_id)
                 if len(rows) > 0:
@@ -39,6 +47,9 @@ def login_required(func):
 
 
 def pass_pop(row):
+    '''
+    Remove password from QuerySet of user_object
+    '''
     user_id = row.id
     email = row.email
     client_name = row.client_name
