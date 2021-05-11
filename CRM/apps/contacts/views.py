@@ -1,14 +1,9 @@
-import jwt
-import datetime as dt
 from .models import Contacts
 from apps.user.models import Users
 from CRM.utility import json_output, pass_pop, login_required
 from CRM.settings import SECRET_KEY
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.decorators import api_view
-from rest_framework.decorators import parser_classes
-from django.core import serializers
-from django.http import JsonResponse
+from rest_framework.decorators import parser_classes, api_view
 from django.core.exceptions import ObjectDoesNotExist
 
 
@@ -68,7 +63,9 @@ def delete(request, user_id, contact_id):
         if row.user_id == user_obj:
             row.delete()
             # OK
-            return json_output(info='contact deleted', data={'deleted contact_id': contact_id})
+            return json_output(info='contact deleted',
+                               data={'deleted contact_id': contact_id}
+                               )
         else:
             # Unauthorized
             return json_output(error='Unauthorized', status=401)
@@ -95,10 +92,9 @@ def update(request, contact_id, user_id):
             data = {'name': contact_obj.name,
                     'phone': contact_obj.phone}
             return json_output(info='updated!', data=data)  # OK
-
+        
         except ObjectDoesNotExist:
             # Not found
             return json_output(error=f'contact_id was not found!', status=404)
-
     else:
         return json_output(error='Empty request', status=400)  # Bad Request!

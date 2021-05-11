@@ -4,9 +4,7 @@ from .models import Users
 from CRM.utility import json_output, pass_pop, login_required
 from CRM.settings import SECRET_KEY
 from rest_framework.parsers import FormParser, MultiPartParser
-from rest_framework.decorators import api_view
-from rest_framework.decorators import parser_classes
-from django.http import JsonResponse
+from rest_framework.decorators import api_view, parser_classes
 
 
 @api_view(['POST'])
