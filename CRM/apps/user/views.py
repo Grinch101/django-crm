@@ -1,14 +1,14 @@
 import jwt
+import json
 import datetime as dt
 from .models import Users
 from CRM.utility import json_output, pass_pop, login_required
 from CRM.settings import SECRET_KEY
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.decorators import api_view, parser_classes
 
 
 @api_view(['POST'])
-@parser_classes([MultiPartParser, FormParser])
 def signup(request):
     email = request.data['inputEmail']
     passkey = request.data['inputPassword']
@@ -31,8 +31,7 @@ def signup(request):
 
 
 @api_view(['POST'])
-@parser_classes([MultiPartParser, FormParser])
-def login(request):
+def login(request, format=None):
     email = request.data['inputEmail']
     passkey = request.data['inputPassword']
     rows = Users.objects.filter(email=email)
@@ -56,7 +55,6 @@ def login(request):
 
 @login_required
 @api_view(['GET'])
-@parser_classes([MultiPartParser])
 def current_user(request, user_id):
     row = Users.objects.get(id=user_id).id
     data = pass_pop(row)
@@ -65,7 +63,6 @@ def current_user(request, user_id):
 
 @login_required
 @api_view(['PUT'])
-@parser_classes([MultiPartParser, FormParser])
 def user_update(request, user_id):
     update_list = list(dict(request.data).keys())
     if update_list != []:
