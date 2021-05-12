@@ -1,3 +1,4 @@
+import json
 from .models import Contacts
 from apps.user.models import Users
 from CRM.utility import json_output, pass_pop, login_required
@@ -5,48 +6,42 @@ from CRM.settings import SECRET_KEY
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.decorators import parser_classes, api_view
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.serializers import serialize
 
 
 @login_required
 @api_view(['POST'])
-@parser_classes([FormParser, MultiPartParser])
 def add(request, user_id):
-    data_list = list(dict(request.data).keys())
-    if len(data_list) < 2:
-        # Bad Request!
-        return json_output(error='incomplete request!', status=400)
-    else:
-        name = request.data['Name']
-        phone = request.data['Number']
-        user_obj = Users.objects.get(id=user_id)
-        if user_obj is None or user_obj == []:
-            # not found!
-            return json_output(error='User not found!', status=404)
-        else:
-            new_row = Contacts.objects.create(
-                name=name, phone=phone, user_id=user_obj)
-            new_row.save()
-            qs = Contacts.objects.filter(
-                name=name, phone=phone, user_id=user_obj)[0]
-            data = {'name': qs.name,
-                    'phone': qs.phone,
-                    'user_id': user_id,
-                    'contact_id': qs.id}
-            # created!
-            return json_output(info='Contact added', data=data, status=201)
+    attrs = request.data.keys()
+    FirstName = request.data['FirstName']
+    LastName = request.data['LastName']
+    Email = request.data['Email']
+    PhoneNumber = request.data['PhoneNumber']
+    user_obj = Users.objects.get(id=user_id)
+    contact_row = Contacts.objects.create(FirstName=FirstName,
+                                          LastName=LastName,
+                                          Email=Email,
+                                          PhoneNumber=PhoneNumber,
+                                          user_id=user_obj)
+    contact_row.save()
+    data = {'id':contact_row.id}
+    for attr in attrs:
+        data = {**data , f'{attr}':getattr(contact_row, attr)}
+    return json_output(info='Contact added', data=data, status=201)
 
 
 @login_required
 @api_view(['GET'])
-@parser_classes([FormParser, MultiPartParser])
 def all(request, user_id):
     user_obj = Users.objects.get(id=user_id)
     contacts_list = Contacts.objects.filter(user_id=user_obj)
     output_list = []
     for row in contacts_list:
         output_list.append({
-            'name': row.name,
-            'phone': row.phone,
+            'FirstName': row.FirstName,
+            'LastName': row.LastName,
+            'Email': row.Email,
+            'PhoneNumber': row.PhoneNumber,
             'contact_id': row.id,
             'user_id': user_id
         })
@@ -55,7 +50,6 @@ def all(request, user_id):
 
 @login_required
 @api_view(['DELETE'])
-@parser_classes([FormParser, MultiPartParser])
 def delete(request, user_id, contact_id):
     user_obj = Users.objects.get(id=user_id)
     try:
@@ -76,21 +70,25 @@ def delete(request, user_id, contact_id):
 
 @login_required
 @api_view(['PUT'])
-@parser_classes([FormParser, MultiPartParser])
 def update(request, contact_id, user_id):
-    update_list = list(dict(request.data).keys())
+    update_list = request.data.keys()
     if update_list != []:
         user_obj = Users.objects.get(id=user_id)
         try:
-            contact_obj = Contacts.objects.filter(
-                id=contact_id, user_id=user_obj)[0]
-            if 'new_name' in update_list:
-                contact_obj.name = request.data['new_name']
-            if 'new_phone' in update_list:
-                contact_obj.phone = request.data['new_phone']
-            contact_obj.save()
-            data = {'name': contact_obj.name,
-                    'phone': contact_obj.phone}
+            contact_obj = Contacts.objects.get(id=contact_id,
+                                                  user_id=user_obj)
+            valid_fields = ['FirstName','LastName',
+                            'Email','PhoneNumber']
+            for item in update_list:
+                if item not in valid_fields:
+                    return json_output(error=f'invalid fields for {item}. valid fields are: {valid_fields}',
+                                       status=400) # Bad request!
+                setattr(contact_obj, item, request.data[item])
+                contact_obj.save()
+    
+            data = {'id':contact_obj.id}
+            for attr in valid_fields:
+                data = {**data , f'{attr}':getattr(contact_obj, attr)}
             return json_output(info='updated!', data=data)  # OK
         
         except ObjectDoesNotExist:
