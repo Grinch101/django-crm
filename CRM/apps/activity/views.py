@@ -15,7 +15,6 @@ from django.http import JsonResponse
 class activity(APIView):
 
     @method_decorator(login_required)
-    @method_decorator(parser_classes([FormParser, MultiPartParser]))
     def get(self, request, user_id, contact_id):
         user_obj = Users.objects.get(id=user_id)
         try:
@@ -43,7 +42,6 @@ class activity(APIView):
             return json_output(error='No activity was found!', status=404)
 
     @method_decorator(login_required)
-    @method_decorator(parser_classes([FormParser, MultiPartParser]))
     def post(self, request, user_id, contact_id):
         user_obj = Users.objects.get(id=user_id)
         try:
@@ -78,7 +76,6 @@ class activity(APIView):
 
 @login_required
 @api_view(['DELETE'])
-@parser_classes([FormParser, MultiPartParser])
 def delete_activity(request, user_id, contact_id, activity_id):
     user_obj = Users.objects.get(id=user_id)
     try:
@@ -87,8 +84,10 @@ def delete_activity(request, user_id, contact_id, activity_id):
         # Not Found!
         return json_output(error="Contact was not found", status=404)
     try:
-        qs = Activities.objects.get(
-            id=activity_id, user_id=user_obj, contact_id=contact_obj)
+        qs = Activities.objects.get(id=activity_id,
+                                    user_id=user_obj,
+                                    contact_id=contact_obj
+                                    )
         attrs = ['action', 'description', 'time', 'date', 'id']
         data = {attr: getattr(qs, attr, None) for attr in attrs}
         qs.delete()
@@ -96,10 +95,3 @@ def delete_activity(request, user_id, contact_id, activity_id):
     except ObjectDoesNotExist:
         # Not Found!
         return json_output(info='Activity was not found', status=404)
-    except MultipleObjectsReturned:
-        # Conflict!
-        return json_output(
-            info='error in database: Multiple activity with the same id returned',
-            status=409
-        )
-        # This is not gonna happen, id is primary key. it's here just for test!
